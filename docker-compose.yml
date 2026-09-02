@@ -1,0 +1,67 @@
+services:
+  scanner:
+    build: .
+    image: kleinanzeigen-scanner:latest
+    container_name: kleinanzeigen-scanner
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: 512m
+    environment:
+      TZ: Europe/Berlin
+      LOG_LEVEL: INFO
+      DATABASE_PATH: /app/data/scanner.db
+      HEARTBEAT_PATH: /app/data/heartbeat
+
+      # Komplette Konfiguration. Alles unterhalb von "CONFIG_YAML: |" ist YAML
+      # und muss eingerueckt bleiben. Nach Aenderungen: docker compose up -d
+      # Passwort lieber in einer .env? Siehe README, Abschnitt "Secrets".
+      CONFIG_YAML: |
+        recipients:
+          - deine.adresse@example.com
+
+        smtp:
+          host: smtp.gmail.com
+          port: 587
+          user: dein.scanner.konto@gmail.com
+          password: app-passwort-hier
+          from_address: dein.scanner.konto@gmail.com
+          from_name: Kleinanzeigen Scanner
+          security: starttls
+
+        # Gilt fuer alle Suchen, pro Suche ueberschreibbar
+        defaults:
+          interval_minutes: 15
+          max_pages: 1
+          only_offers: true
+          exclude_sponsored: true
+          seed_on_first_run: true
+          include_free: true
+
+        searches:
+          - name: ThinkCentre Mini-PC
+            queries:
+              - lenovo thinkcentre m720q
+              - lenovo thinkcentre m920q
+              - lenovo thinkcentre m75q
+            price_min: 50
+            price_max: 200
+            negotiable: any
+            keywords:
+              none_of: [defekt, bastler, ersatzteil]
+
+          - name: PS5 Konsole
+            enabled: false
+            query: playstation 5
+            price_min: 100
+            price_max: 350
+            negotiable: only
+            keywords:
+              any_of: [slim, laufwerk, disc]
+              none_of: [defekt, bastler, controller]
+            notify_on_price_drop: true

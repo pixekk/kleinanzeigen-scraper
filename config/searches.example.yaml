@@ -1,0 +1,61 @@
+# Alternative zur Konfiguration in der docker-compose.yml (CONFIG_YAML).
+# Kopiere diese Datei nach config/searches.yaml, wenn du lieber mit Dateien arbeitest.
+# ${SMTP_HOST} & Co. werden aus der .env / den Container-Env-Variablen ersetzt.
+
+recipients:
+  - ${MAIL_TO}
+
+smtp:
+  host: ${SMTP_HOST}
+  port: 587
+  user: ${SMTP_USER}
+  password: ${SMTP_PASSWORD}
+  from_address: ${SMTP_FROM}
+  from_name: Kleinanzeigen Scanner
+  security: starttls        # starttls | ssl | none
+
+log_level: INFO
+request_delay_seconds: 3    # Pause zwischen zwei Requests
+
+# Gilt fuer alle Suchen, pro Suche ueberschreibbar
+defaults:
+  interval_minutes: 15
+  max_pages: 1              # 1 Seite = ~25 neueste Anzeigen
+  only_offers: true         # keine "Gesuche"
+  exclude_sponsored: true   # gesponserte PRO-Anzeigen ignorieren
+  seed_on_first_run: true   # erster Lauf sammelt nur, verschickt keine Flut-Mail
+  include_free: true        # "Zu verschenken" mitnehmen
+  fetch_details: false      # Anzeigenseite zusaetzlich laden (selten noetig)
+
+searches:
+  # Mehrere Modelle in einer Suche: alle Begriffe, eine gemeinsame Mail
+  - name: ThinkCentre Mini-PC
+    queries:
+      - lenovo thinkcentre m720q
+      - lenovo thinkcentre m920q
+      - lenovo thinkcentre m75q
+    price_min: 50
+    price_max: 200
+    negotiable: any         # any = egal | only = nur "VB" | exclude = nur Festpreis
+    keywords:
+      none_of: [defekt, bastler, ersatzteil]
+
+  - name: PS5 Konsole
+    query: playstation 5
+    price_min: 100
+    price_max: 350
+    include_without_price: false
+    location_id: "3331"     # Ort-ID aus der Kleinanzeigen-URL (.../k0l3331r30)
+    radius_km: 30
+    keywords:
+      all_of: []            # ALLE Begriffe muessen vorkommen
+      any_of: [slim, disc, laufwerk]   # mindestens einer muss vorkommen
+      none_of: [defekt, bastler, controller]
+    notify_on_price_drop: true
+
+  # Fertige Browser-URLs statt Suchbegriffen
+  - name: Eigene URLs
+    enabled: false
+    urls:
+      - https://www.kleinanzeigen.de/s-stuttgart/laptop/k0l3331r20
+    price_max: 300
