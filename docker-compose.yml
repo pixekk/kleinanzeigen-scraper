@@ -4,6 +4,8 @@ services:
     image: kleinanzeigen-scanner:latest
     container_name: kleinanzeigen-scanner
     restart: unless-stopped
+    env_file:
+      - .env
     volumes:
       - ./data:/app/data
     logging:
@@ -18,21 +20,20 @@ services:
       DATABASE_PATH: /app/data/scanner.db
       HEARTBEAT_PATH: /app/data/heartbeat
 
-      # Komplette Konfiguration. Alles unterhalb von "CONFIG_YAML: |" ist YAML
-      # und muss eingerueckt bleiben. Nach Aenderungen: docker compose up -d
-      # Passwort lieber in einer .env? Siehe README, Abschnitt "Secrets".
+      # Zugangsdaten kommen aus .env (siehe .env.example) und werden hier nur
+      # referenziert - doppeltes $$ ist wichtig, sonst loest Compose es selbst auf.
       CONFIG_YAML: |
         recipients:
-          - deine.adresse@example.com
+          - $${MAIL_TO}
 
         smtp:
-          host: smtp.gmail.com
-          port: 587
-          user: dein.scanner.konto@gmail.com
-          password: app-passwort-hier
-          from_address: dein.scanner.konto@gmail.com
+          host: $${SMTP_HOST}
+          port: $${SMTP_PORT}
+          user: $${SMTP_USER}
+          password: $${SMTP_PASSWORD}
+          from_address: $${SMTP_FROM}
           from_name: Kleinanzeigen Scanner
-          security: starttls
+          security: $${SMTP_SECURITY}
 
         # Gilt fuer alle Suchen, pro Suche ueberschreibbar
         defaults:

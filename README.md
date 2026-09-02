@@ -23,27 +23,43 @@ Ein Kleinanzeigen-Account wird **nicht** benötigt – die Suchergebnisse sind �
 
 ## Schnellstart
 
-1. `docker-compose.yml` öffnen und im Block `CONFIG_YAML:` die SMTP-Daten und Suchen eintragen.
-2. Starten:
+1. `.env` aus der Vorlage anlegen und mit den echten Zugangsdaten füllen (landet **nicht** im Repo):
+
+```bash
+cp .env.example .env
+```
+
+Dann `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` und
+`MAIL_TO` eintragen – die Werte deines eigenen Mailservers bzw. Postfachs.
+
+2. `docker-compose.yml` öffnen und im Block `CONFIG_YAML:` die Suchen eintragen. Die
+   `smtp:`-Sektion braucht dort nichts weiter, sie verweist bereits auf die `.env`
+   (`$${SMTP_HOST}` usw. – das doppelte `$` ist wichtig, siehe [Secrets](#secrets)).
+3. Starten:
 
 ```bash
 docker compose up -d --build
 ```
 
-3. Logs prüfen:
+4. Logs prüfen:
 
 ```bash
 docker compose logs -f
 ```
 
-Für einen weiteren Container einfach die `docker-compose.yml` kopieren, `container_name`,
-Volume-Pfad und die Suchen anpassen – mehr ist nicht nötig.
+Für einen weiteren Container die `docker-compose.yml` kopieren (`container_name`,
+Volume-Pfad, Suchen anpassen) und eine eigene `.env` daneben anlegen.
 
-### Gmail als Absender
+### Eigener Mailserver
 
-Für ein separates Scanner-Postfach: 2FA aktivieren, unter `myaccount.google.com/apppasswords`
-ein App-Passwort erzeugen und als `password` eintragen (Host `smtp.gmail.com`, Port `587`,
-`security: starttls`).
+`SMTP_SECURITY` steuert die Verbindung: `starttls` (meist Port 587), `ssl` (meist Port 465)
+oder `none` (Port 25, nur intern/unverschlüsselt). `SMTP_USER`/`SMTP_PASSWORD` sind die
+Zugangsdaten des Postfachs, `SMTP_FROM` üblicherweise identisch mit `SMTP_USER`. Mit
+`--test-mail` (siehe unten) lässt sich die Konfiguration vor dem produktiven Einsatz prüfen.
+
+Für Gmail als Absender: 2FA am Konto aktivieren, unter `myaccount.google.com/apppasswords`
+ein App-Passwort erzeugen und als `SMTP_PASSWORD` eintragen (`SMTP_HOST=smtp.gmail.com`,
+`SMTP_PORT=587`, `SMTP_SECURITY=starttls`).
 
 ### Ort und Kategorie herausfinden
 
@@ -60,9 +76,9 @@ Sortierung werden übernommen, Preis- und Keyword-Filter greifen weiterhin.
 
 ## Secrets
 
-Wer das SMTP-Passwort nicht in der `docker-compose.yml` haben will, legt eine `.env` an
-(siehe `.env.example`) und referenziert sie mit doppeltem Dollar, damit Compose die Variable
-stehen lässt und erst der Scanner sie einsetzt:
+Die `docker-compose.yml` liegt in einem **öffentlichen** Repo und enthält deshalb keine echten
+Zugangsdaten. Sie referenziert stattdessen Variablen aus `.env` (die per `.gitignore` nie
+committet wird):
 
 ```yaml
     env_file: [.env]
@@ -74,7 +90,11 @@ stehen lässt und erst der Scanner sie einsetzt:
           password: $${SMTP_PASSWORD}
 ```
 
-Dritte Möglichkeit: `config/searches.yaml` anlegen (Vorlage: `config/searches.example.yaml`),
+Das doppelte `$$` ist nötig, damit Compose die Variable beim Einlesen der Datei stehen lässt
+und erst der Scanner sie zur Laufzeit einsetzt. Wichtig: `.env` niemals committen, nicht mal
+versehentlich – vor jedem `git add` lohnt ein `git status`.
+
+Alternative: `config/searches.yaml` anlegen (Vorlage: `config/searches.example.yaml`),
 `CONFIG_YAML` aus der Compose-Datei entfernen und den Ordner mounten:
 
 ```yaml
