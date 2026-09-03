@@ -1,84 +1,83 @@
 # Kleinanzeigen Scanner
 
-Durchsucht kleinanzeigen.de in festen Intervallen nach definierten Suchen und schickt neue
-Treffer per E-Mail. Läuft als Endlos-Loop im Container – kein Cron, kein externer Scheduler.
+Polls kleinanzeigen.de at fixed intervals for a set of configured searches and emails you
+new matches. Runs as an endless loop inside the container – no cron, no external scheduler.
 
 ## Features
 
-- **Alles in der `docker-compose.yml`** konfigurierbar: Suchen, Filter, SMTP. Kein zweites File nötig.
-- Mehrere Suchen parallel, jede mit eigenem Intervall (Default 15 Minuten)
-- **Mehrere Suchbegriffe pro Suche** (`queries:`) – z. B. drei ThinkCentre-Modelle, eine gemeinsame Mail,
-  Duplikate werden herausgefiltert
-- Preisrange (`price_min` / `price_max`), zusätzlich direkt als URL-Filter
-- VB-Filter: `any` (egal), `only` (nur Verhandlungsbasis), `exclude` (nur Festpreis)
-- "Zu verschenken" und Anzeigen ohne Preis getrennt steuerbar
-- Keyword-Filter über Titel + **kompletten Anzeigentext**: `all_of`, `any_of`, `none_of`
-  (case- und umlautunabhängig). Ohne Keywords wird alles zurückgegeben.
-- Umkreissuche (Orts-ID + Radius), Kategorie-Filter, "nur Angebote", gesponserte PRO-Anzeigen ausblenden
-- SQLite-Duplikatsschutz: jede Anzeige wird genau einmal gemeldet; optional erneut bei Preissenkung
-- Erster Lauf sammelt still (kein Mail-Schwall), danach nur noch echte Neuzugänge
-- HTML-Mail mit Bild, Preis, Ort, Zeitpunkt und Direktlink
+- **Everything configurable in `docker-compose.yml`**: searches, filters, SMTP. No second file needed.
+- Multiple searches in parallel, each with its own interval (default 15 minutes)
+- **Multiple search terms per search** (`queries:`) – e.g. several model variants, one shared mail,
+  duplicates are filtered out
+- Price range (`price_min` / `price_max`), also applied directly as a URL filter
+- Negotiable-price filter: `any`, `only` (negotiable only), `exclude` (fixed price only)
+- "Free to a good home" and listings without a price handled separately
+- Keyword filter over title + **full listing text**: `all_of`, `any_of`, `none_of`
+  (case- and umlaut-insensitive). Returns everything when no keywords are set.
+- Radius search (location ID + radius), category filter, "offers only", hide sponsored PRO listings
+- SQLite dedup: every listing is reported exactly once; optionally again on a price drop
+- First run collects silently (no flood of mail), only real new listings afterwards
+- HTML mail with image, price, location, timestamp and direct link
 
-Ein Kleinanzeigen-Account wird **nicht** benötigt – die Suchergebnisse sind öffentlich abrufbar.
+No Kleinanzeigen account is needed – the search results are publicly available.
 
-## Schnellstart
+## Quick start
 
-1. `.env` aus der Vorlage anlegen und mit den echten Zugangsdaten füllen (landet **nicht** im Repo):
+1. Create `.env` from the template and fill in your real credentials (never lands in the repo):
 
 ```bash
 cp .env.example .env
 ```
 
-Dann `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` und
-`MAIL_TO` eintragen – die Werte deines eigenen Mailservers bzw. Postfachs.
+Then set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` and
+`MAIL_TO` to the values of your own mail server / mailbox.
 
-2. `docker-compose.yml` öffnen und im Block `CONFIG_YAML:` die Suchen eintragen. Die
-   `smtp:`-Sektion braucht dort nichts weiter, sie verweist bereits auf die `.env`
-   (`$${SMTP_HOST}` usw. – das doppelte `$` ist wichtig, siehe [Secrets](#secrets)).
-3. Starten:
+2. Open `docker-compose.yml` and add your searches inside the `CONFIG_YAML:` block. The
+   `smtp:` section doesn't need anything further there, it already refers to `.env`
+   (`$${SMTP_HOST}` etc. – the doubled `$` is important, see [Secrets](#secrets)).
+3. Start it:
 
 ```bash
 docker compose up -d --build
 ```
 
-4. Logs prüfen:
+4. Check the logs:
 
 ```bash
 docker compose logs -f
 ```
 
-Für einen weiteren Container die `docker-compose.yml` kopieren (`container_name`,
-Volume-Pfad, Suchen anpassen) und eine eigene `.env` daneben anlegen.
+For an additional container, copy `docker-compose.yml` (adjust `container_name`,
+volume path, searches) and place a separate `.env` next to it.
 
-### Eigener Mailserver
+### Using your own mail server
 
-`SMTP_SECURITY` steuert die Verbindung: `starttls` (meist Port 587), `ssl` (meist Port 465)
-oder `none` (Port 25, nur intern/unverschlüsselt). `SMTP_USER`/`SMTP_PASSWORD` sind die
-Zugangsdaten des Postfachs, `SMTP_FROM` üblicherweise identisch mit `SMTP_USER`. Mit
-`--test-mail` (siehe unten) lässt sich die Konfiguration vor dem produktiven Einsatz prüfen.
+`SMTP_SECURITY` controls the connection: `starttls` (usually port 587), `ssl` (usually port 465)
+or `none` (port 25, internal/unencrypted only). `SMTP_USER`/`SMTP_PASSWORD` are the mailbox
+credentials, `SMTP_FROM` is usually the same as `SMTP_USER`. Use `--test-mail` (see below) to
+verify the configuration before relying on it.
 
-Für Gmail als Absender: 2FA am Konto aktivieren, unter `myaccount.google.com/apppasswords`
-ein App-Passwort erzeugen und als `SMTP_PASSWORD` eintragen (`SMTP_HOST=smtp.gmail.com`,
+For Gmail as the sender: enable 2FA on the account, generate an app password at
+`myaccount.google.com/apppasswords` and use it as `SMTP_PASSWORD` (`SMTP_HOST=smtp.gmail.com`,
 `SMTP_PORT=587`, `SMTP_SECURITY=starttls`).
 
-### Ort und Kategorie herausfinden
+### Finding location and category IDs
 
-Suche einmal im Browser mit dem gewünschten Ort/Radius ausführen und die URL ansehen:
+Run a search once in the browser with the desired location/radius and look at the URL:
 
 ```
-https://www.kleinanzeigen.de/s-stuttgart/playstation/k0c161l3331r30
-                                                       ^^^  ^^^^ ^^
-                                              category_id  location_id  radius_km
+https://www.kleinanzeigen.de/s-stuttgart/fahrrad/k0c161l3331r30
+                                                   ^^^  ^^^^ ^^
+                                          category_id  location_id  radius_km
 ```
 
-Alternativ die fertige Browser-URL direkt unter `urls:` eintragen – Ort, Kategorie und
-Sortierung werden übernommen, Preis- und Keyword-Filter greifen weiterhin.
+Alternatively, put the finished browser URL directly under `urls:` – location, category and
+sorting are taken from it, price and keyword filters still apply.
 
 ## Secrets
 
-Die `docker-compose.yml` liegt in einem **öffentlichen** Repo und enthält deshalb keine echten
-Zugangsdaten. Sie referenziert stattdessen Variablen aus `.env` (die per `.gitignore` nie
-committet wird):
+`docker-compose.yml` lives in a **public** repo, so it doesn't contain any real credentials.
+It references variables from `.env` instead (which is never committed, via `.gitignore`):
 
 ```yaml
     env_file: [.env]
@@ -90,12 +89,12 @@ committet wird):
           password: $${SMTP_PASSWORD}
 ```
 
-Das doppelte `$$` ist nötig, damit Compose die Variable beim Einlesen der Datei stehen lässt
-und erst der Scanner sie zur Laufzeit einsetzt. Wichtig: `.env` niemals committen, nicht mal
-versehentlich – vor jedem `git add` lohnt ein `git status`.
+The doubled `$$` is needed so Compose leaves the variable alone when reading the file, and only
+the scanner substitutes it at runtime. Important: never commit `.env`, not even by accident –
+running `git status` before every `git add` is worth it.
 
-Alternative: `config/searches.yaml` anlegen (Vorlage: `config/searches.example.yaml`),
-`CONFIG_YAML` aus der Compose-Datei entfernen und den Ordner mounten:
+Alternative: create `config/searches.yaml` (template: `config/searches.example.yaml`),
+remove `CONFIG_YAML` from the compose file and mount the folder instead:
 
 ```yaml
     volumes:
@@ -105,110 +104,91 @@ Alternative: `config/searches.yaml` anlegen (Vorlage: `config/searches.example.y
       CONFIG_PATH: /app/config/searches.yaml
 ```
 
-## Betrieb im Proxmox-LXC
+## Useful commands
 
-Docker in einem **unprivilegierten** LXC braucht Nesting. Auf dem Proxmox-Host:
-
-```bash
-pct set <CTID> -features nesting=1,keyctl=1
-```
-
-Danach im Container Docker installieren (`curl -fsSL https://get.docker.com | sh`), das Projekt
-nach z. B. `/opt/kleinanzeigen-scanner` legen und `docker compose up -d --build` ausführen.
-`restart: unless-stopped` startet den Scanner nach einem Neustart automatisch mit.
-
-Ohne Docker geht es auch direkt mit systemd:
-
-```bash
-apt install -y python3-venv && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-CONFIG_PATH=config/searches.yaml .venv/bin/python -m app.main
-```
-
-## Nützliche Befehle
-
-Gebaute Such-URLs anzeigen (prüft die Konfiguration, ohne etwas zu laden):
+Show the built search URLs (validates the config without fetching anything):
 
 ```bash
 docker compose run --rm scanner python -m app.main --show-urls
 ```
 
-SMTP-Einstellungen mit einer Testmail prüfen:
+Verify SMTP settings with a test mail:
 
 ```bash
 docker compose run --rm scanner python -m app.main --test-mail
 ```
 
-Einmal suchen und Treffer nur loggen, statt zu mailen:
+Search once and just log matches instead of mailing them:
 
 ```bash
 docker compose run --rm scanner python -m app.main --once --dry-run
 ```
 
-Gespeicherte Anzeigen einer Suche vergessen (`all` für alle):
+Forget the stored listings for one search (`all` for every search):
 
 ```bash
-docker compose run --rm scanner python -m app.main --reset "ThinkCentre Mini-PC"
+docker compose run --rm scanner python -m app.main --reset "Mountain Bike"
 ```
 
-Tests:
+Run the tests:
 
 ```bash
 docker compose run --rm scanner python -m pytest
 ```
 
-## Konfigurationsreferenz (pro Suche)
+## Configuration reference (per search)
 
-| Feld | Default | Bedeutung |
+| Field | Default | Meaning |
 |---|---|---|
-| `name` | – | eindeutiger Name, erscheint im Mail-Betreff |
-| `query` / `queries` | – | ein Suchbegriff bzw. mehrere Begriffe für dieselbe Suche |
-| `url` / `urls` | – | fertige Kleinanzeigen-Such-URLs statt Suchbegriffen |
-| `category_id` | – | Kategorie aus der URL (`k0c161`), auch ohne Suchbegriff nutzbar |
-| `enabled` | `true` | Suche vorübergehend abschalten |
-| `interval_minutes` | `15` | Abstand zwischen zwei Läufen (min. 5) |
-| `recipients` | global | Empfänger nur für diese Suche |
-| `price_min` / `price_max` | – | Preisrange in Euro |
-| `price_filter_in_url` | `true` | Preisrange zusätzlich als URL-Filter setzen |
-| `negotiable` | `any` | `any` / `only` (nur VB) / `exclude` (nur Festpreis) |
-| `include_without_price` | `false` | Anzeigen ohne Preisangabe trotz Preisrange melden |
-| `include_free` | `true` | "Zu verschenken" immer mitnehmen |
-| `location_id` / `radius_km` | – | Umkreissuche |
-| `only_offers` | `true` | Gesuche ausblenden |
-| `exclude_sponsored` | `true` | gesponserte PRO-/Händleranzeigen ausblenden |
-| `keywords.all_of` | `[]` | alle Begriffe müssen vorkommen |
-| `keywords.any_of` | `[]` | mindestens einer muss vorkommen |
-| `keywords.none_of` | `[]` | keiner darf vorkommen |
-| `fetch_details` | `false` | zusätzlich die Anzeigenseite laden (siehe Hinweise) |
-| `max_pages` | `1` | Ergebnisseiten pro Suchbegriff (ca. 25 Anzeigen je Seite) |
-| `max_new_per_run` | `25` | Obergrenze der Treffer pro Mail |
-| `seed_on_first_run` | `true` | erster Lauf ohne Mail |
-| `notify_on_price_drop` | `false` | bekannte Anzeige erneut melden, wenn der Preis sinkt |
+| `name` | – | unique name, shown in the mail subject |
+| `query` / `queries` | – | one search term or several terms for the same search |
+| `url` / `urls` | – | ready-made Kleinanzeigen search URLs instead of search terms |
+| `category_id` | – | category from the URL (`k0c161`), usable even without a search term |
+| `enabled` | `true` | temporarily disable a search |
+| `interval_minutes` | `15` | time between two runs (min. 5) |
+| `recipients` | global | recipients for this search only |
+| `price_min` / `price_max` | – | price range in euros |
+| `price_filter_in_url` | `true` | also apply the price range as a URL filter |
+| `negotiable` | `any` | `any` / `only` (negotiable only) / `exclude` (fixed price only) |
+| `include_without_price` | `false` | report listings with no price despite a price range |
+| `include_free` | `true` | always include "free to a good home" listings |
+| `location_id` / `radius_km` | – | radius search |
+| `only_offers` | `true` | hide "wanted" ads |
+| `exclude_sponsored` | `true` | hide sponsored PRO/dealer listings |
+| `keywords.all_of` | `[]` | every term must be present |
+| `keywords.any_of` | `[]` | at least one term must be present |
+| `keywords.none_of` | `[]` | none of these terms may be present |
+| `fetch_details` | `false` | also load the listing page (see Notes) |
+| `max_pages` | `1` | result pages per search term (~25 listings per page) |
+| `max_new_per_run` | `25` | upper limit of matches per mail |
+| `seed_on_first_run` | `true` | first run sends no mail |
+| `notify_on_price_drop` | `false` | report a known listing again if the price drops |
 
-## Struktur
+## Structure
 
 ```
 app/
-  main.py       CLI + Endlos-Loop mit Scheduler und Signal-Handling
-  runner.py     Ablauf einer Suche: laden, filtern, speichern, mailen
-  scraper.py    URL-Bau und HTML-Parsing
-  fetcher.py    HTTP-Client mit Throttling, Retry und Block-Erkennung
-  filters.py    Preis-, VB- und Keyword-Logik
-  storage.py    SQLite (gesehene Anzeigen, Laufzustand)
-  notifier.py   SMTP-Versand, HTML- und Text-Mail
-  config.py     YAML aus CONFIG_YAML oder Datei laden und validieren
+  main.py       CLI + endless loop with scheduler and signal handling
+  runner.py     one search run: fetch, filter, store, mail
+  scraper.py    URL building and HTML parsing
+  fetcher.py    HTTP client with throttling, retry and block detection
+  filters.py    price, negotiable-price and keyword logic
+  storage.py    SQLite (seen listings, run state)
+  notifier.py   SMTP sending, HTML and text mail
+  config.py     load and validate YAML from CONFIG_YAML or a file
 config/searches.example.yaml
-tests/          Unit-Tests inkl. Fixture einer echten Ergebnisseite
+tests/          unit tests, including a fixture of a real result page
 ```
 
-## Hinweise
+## Notes
 
-- Die Suchergebnisliste enthält bereits den vollständigen Anzeigentext, deshalb greifen
-  Keyword-Filter ohne Zusatz-Request. `fetch_details: true` lädt zusätzlich die Anzeigenseite –
-  nur nötig, wenn Kleinanzeigen den Text in der Liste einmal kürzen sollte.
-- Das Intervall ist bewusst auf mindestens 5 Minuten begrenzt, zwischen einzelnen Requests
-  liegen 3–4,5 Sekunden Pause. Bei HTTP 403/429 pausiert der Scanner die betroffene Suche bis
-  zum nächsten Intervall und protokolliert das.
-- Mehrere `queries` bedeuten mehrere Requests pro Lauf (ein Request je Begriff und Seite).
-- Ändert Kleinanzeigen sein HTML, sind die Extraktoren in `app/scraper.py` die einzige
-  anzupassende Stelle; `tests/fixtures/srp_sample.html` enthält eine echte Ergebnisseite als
-  Referenz, `tests/test_scraper.py` prüft altes und aktuelles Markup.
+- The search results list already contains the full listing text, so keyword filters work
+  without an extra request. `fetch_details: true` additionally loads the listing page –
+  only needed if Kleinanzeigen ever truncates the text in the list.
+- The interval is deliberately limited to a minimum of 5 minutes, with a 3–4.5 second pause
+  between individual requests. On HTTP 403/429 the scanner pauses the affected search until
+  the next interval and logs it.
+- Multiple `queries` mean multiple requests per run (one request per term and page).
+- If Kleinanzeigen changes its HTML, the extractors in `app/scraper.py` are the only place
+  that needs updating; `tests/fixtures/srp_sample.html` contains a real result page as a
+  reference, `tests/test_scraper.py` checks old and current markup.

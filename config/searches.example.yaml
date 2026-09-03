@@ -1,6 +1,6 @@
-# Alternative zur Konfiguration in der docker-compose.yml (CONFIG_YAML).
-# Kopiere diese Datei nach config/searches.yaml, wenn du lieber mit Dateien arbeitest.
-# ${SMTP_HOST} & Co. werden aus der .env / den Container-Env-Variablen ersetzt.
+# Alternative to configuring via docker-compose.yml (CONFIG_YAML).
+# Copy this file to config/searches.yaml if you prefer working with files.
+# ${SMTP_HOST} and friends are substituted from .env / container env vars.
 
 recipients:
   - ${MAIL_TO}
@@ -15,46 +15,45 @@ smtp:
   security: starttls        # starttls | ssl | none
 
 log_level: INFO
-request_delay_seconds: 3    # Pause zwischen zwei Requests
+request_delay_seconds: 3    # pause between two requests
 
-# Gilt fuer alle Suchen, pro Suche ueberschreibbar
+# Applies to all searches, overridable per search
 defaults:
   interval_minutes: 15
-  max_pages: 1              # 1 Seite = ~25 neueste Anzeigen
-  only_offers: true         # keine "Gesuche"
-  exclude_sponsored: true   # gesponserte PRO-Anzeigen ignorieren
-  seed_on_first_run: true   # erster Lauf sammelt nur, verschickt keine Flut-Mail
-  include_free: true        # "Zu verschenken" mitnehmen
-  fetch_details: false      # Anzeigenseite zusaetzlich laden (selten noetig)
+  max_pages: 1              # 1 page = ~25 most recent listings
+  only_offers: true         # no "wanted" ads
+  exclude_sponsored: true   # ignore sponsored PRO listings
+  seed_on_first_run: true   # first run only collects, no flood of mail
+  include_free: true        # include "free to a good home" listings
+  fetch_details: false      # also load the listing page (rarely needed)
 
 searches:
-  # Mehrere Modelle in einer Suche: alle Begriffe, eine gemeinsame Mail
-  - name: ThinkCentre Mini-PC
+  # Several models in one search: all terms, one shared mail
+  - name: Mountain Bike
     queries:
-      - lenovo thinkcentre m720q
-      - lenovo thinkcentre m920q
-      - lenovo thinkcentre m75q
-    price_min: 50
-    price_max: 200
-    negotiable: any         # any = egal | only = nur "VB" | exclude = nur Festpreis
+      - mountainbike 29 zoll
+      - mtb hardtail
+    price_min: 100
+    price_max: 500
+    negotiable: any         # any = doesn't matter | only = negotiable only | exclude = fixed price only
     keywords:
       none_of: [defekt, bastler, ersatzteil]
 
-  - name: PS5 Konsole
-    query: playstation 5
-    price_min: 100
-    price_max: 350
+  - name: Sofa
+    query: sofa 3-sitzer
+    price_min: 50
+    price_max: 300
     include_without_price: false
-    location_id: "3331"     # Ort-ID aus der Kleinanzeigen-URL (.../k0l3331r30)
+    location_id: "3331"     # location ID from the Kleinanzeigen URL (.../k0l3331r30)
     radius_km: 30
     keywords:
-      all_of: []            # ALLE Begriffe muessen vorkommen
-      any_of: [slim, disc, laufwerk]   # mindestens einer muss vorkommen
-      none_of: [defekt, bastler, controller]
+      all_of: []            # ALL terms must be present
+      any_of: [neuwertig, wenig benutzt]   # at least one must be present
+      none_of: [defekt, wasserschaden]
     notify_on_price_drop: true
 
-  # Fertige Browser-URLs statt Suchbegriffen
-  - name: Eigene URLs
+  # Ready-made browser URLs instead of search terms
+  - name: Custom URLs
     enabled: false
     urls:
       - https://www.kleinanzeigen.de/s-stuttgart/laptop/k0l3331r20

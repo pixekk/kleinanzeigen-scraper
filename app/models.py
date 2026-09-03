@@ -36,4 +36,4 @@ class Listing:
 
     @property
     def price_display(self) -> str:
-        return self.price_text or "Preis auf Anfrage"
+        return self.price_text or "Price on request"

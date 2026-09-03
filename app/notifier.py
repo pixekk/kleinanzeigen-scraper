@@ -37,7 +37,7 @@ def _card(listing: Listing) -> str:
           <div style="font-size:12px;color:#6b7280">{meta}</div>
           <div style="margin-top:6px;font-size:13px;color:#4b5563;line-height:1.45">{description}</div>
           <a href="{url}" style="display:inline-block;margin-top:10px;padding:7px 14px;background:#1f6feb;
-             color:#ffffff;border-radius:6px;font-size:13px;text-decoration:none">Anzeige öffnen</a>
+             color:#ffffff;border-radius:6px;font-size:13px;text-decoration:none">Open listing</a>
         </td>
       </tr>"""
 
@@ -45,25 +45,25 @@ def _card(listing: Listing) -> str:
 def render_html(search: SearchConfig, listings: list[Listing], search_url: str) -> str:
     rows = "".join(_card(listing) for listing in listings)
     return f"""<!doctype html>
-<html lang="de"><body style="margin:0;padding:24px;background:#f3f4f6;
+<html lang="en"><body style="margin:0;padding:24px;background:#f3f4f6;
   font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
   <table role="presentation" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;
     border-radius:10px;padding:24px;border-collapse:collapse">
     <tr><td>
       <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280">Kleinanzeigen Scanner</div>
       <h1 style="margin:6px 0 2px;font-size:20px;color:#111827">{html.escape(search.name)}</h1>
-      <div style="font-size:13px;color:#6b7280">{len(listings)} neue Treffer</div>
+      <div style="font-size:13px;color:#6b7280">{len(listings)} new matches</div>
     </td></tr>
     <tr><td><table role="presentation" width="100%" style="border-collapse:collapse">{rows}</table></td></tr>
     <tr><td style="padding-top:18px;font-size:12px;color:#9ca3af">
-      <a href="{html.escape(search_url, quote=True)}" style="color:#6b7280">Suche im Browser öffnen</a>
+      <a href="{html.escape(search_url, quote=True)}" style="color:#6b7280">Open search in browser</a>
     </td></tr>
   </table>
 </body></html>"""
 
 
 def render_text(search: SearchConfig, listings: list[Listing]) -> str:
-    lines = [f"{search.name}: {len(listings)} neue Treffer", ""]
+    lines = [f"{search.name}: {len(listings)} new matches", ""]
     for listing in listings:
         lines += [
             listing.title,
@@ -113,7 +113,7 @@ class EmailNotifier:
     def send_results(self, search: SearchConfig, listings: list[Listing], search_url: str) -> None:
         if not listings:
             return
-        subject = f"[Kleinanzeigen] {len(listings)} neue Treffer – {search.name}"
+        subject = f"[Kleinanzeigen] {len(listings)} new matches – {search.name}"
         message = self._build(
             subject,
             search.recipients,
@@ -125,10 +125,10 @@ class EmailNotifier:
 
     def send_test(self, recipients: list[str]) -> None:
         message = self._build(
-            "[Kleinanzeigen] Testmail",
+            "[Kleinanzeigen] Test mail",
             recipients,
-            "SMTP-Konfiguration funktioniert.",
-            "<p style='font-family:sans-serif'>SMTP-Konfiguration funktioniert. ✅</p>",
+            "SMTP configuration works.",
+            "<p style='font-family:sans-serif'>SMTP configuration works. ✅</p>",
         )
         self._send(message)
         log.info("test mail sent to %s", ", ".join(recipients))

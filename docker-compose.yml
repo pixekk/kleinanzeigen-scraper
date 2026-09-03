@@ -20,8 +20,8 @@ services:
       DATABASE_PATH: /app/data/scanner.db
       HEARTBEAT_PATH: /app/data/heartbeat
 
-      # Zugangsdaten kommen aus .env (siehe .env.example) und werden hier nur
-      # referenziert - doppeltes $$ ist wichtig, sonst loest Compose es selbst auf.
+      # Credentials come from .env (see .env.example) and are only referenced
+      # here - the doubled $$ is important, otherwise Compose resolves it itself.
       CONFIG_YAML: |
         recipients:
           - $${MAIL_TO}
@@ -35,7 +35,7 @@ services:
           from_name: Kleinanzeigen Scanner
           security: $${SMTP_SECURITY}
 
-        # Gilt fuer alle Suchen, pro Suche ueberschreibbar
+        # Applies to all searches, overridable per search
         defaults:
           interval_minutes: 15
           max_pages: 1
@@ -45,24 +45,22 @@ services:
           include_free: true
 
         searches:
-          - name: ThinkCentre Mini-PC
+          - name: Mountain Bike
             queries:
-              - lenovo thinkcentre m720q
-              - lenovo thinkcentre m920q
-              - lenovo thinkcentre m75q
-            price_min: 50
-            price_max: 200
+              - mountainbike 29 zoll
+              - mtb hardtail
+            price_min: 100
+            price_max: 500
             negotiable: any
             keywords:
               none_of: [defekt, bastler, ersatzteil]
 
-          - name: PS5 Konsole
+          - name: Sofa
             enabled: false
-            query: playstation 5
-            price_min: 100
-            price_max: 350
+            query: sofa 3-sitzer
+            price_min: 50
+            price_max: 300
             negotiable: only
             keywords:
-              any_of: [slim, laufwerk, disc]
-              none_of: [defekt, bastler, controller]
+              none_of: [defekt, wasserschaden]
             notify_on_price_drop: true
