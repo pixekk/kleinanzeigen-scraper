@@ -178,10 +178,13 @@ def load_config(path: Optional[Path] = None) -> AppConfig:
         ("user", "SMTP_USER"),
         ("password", "SMTP_PASSWORD"),
         ("from_address", "SMTP_FROM"),
+        ("security", "SMTP_SECURITY"),
     ):
         if not smtp.get(key):
             smtp[key] = os.getenv(env_name, "")
     smtp["port"] = int(smtp["port"] or 587)
+    if not smtp.get("security"):
+        smtp.pop("security", None)
 
     defaults = raw.get("defaults", {}) or {}
     searches = [_merge_defaults(defaults, s) for s in (raw.get("searches") or [])]
