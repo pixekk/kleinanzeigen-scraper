@@ -8,6 +8,7 @@ services:
       - .env
     volumes:
       - ./data:/app/data
+      - ./config:/app/config
     logging:
       driver: json-file
       options:
@@ -20,47 +21,49 @@ services:
       DATABASE_PATH: /app/data/scanner.db
       HEARTBEAT_PATH: /app/data/heartbeat
 
+      # Alternative zu config/searches.yaml: Block einkommentieren.
+      # CONFIG_YAML hat immer Vorrang vor der Datei.
       # Credentials come from .env (see .env.example) and are only referenced
       # here - the doubled $$ is important, otherwise Compose resolves it itself.
-      CONFIG_YAML: |
-        recipients:
-          - $${MAIL_TO}
-
-        smtp:
-          host: $${SMTP_HOST}
-          port: $${SMTP_PORT}
-          user: $${SMTP_USER}
-          password: $${SMTP_PASSWORD}
-          from_address: $${SMTP_FROM}
-          from_name: Kleinanzeigen Scanner
-          security: $${SMTP_SECURITY}
-
-        # Applies to all searches, overridable per search
-        defaults:
-          interval_minutes: 15
-          max_pages: 1
-          only_offers: true
-          exclude_sponsored: true
-          seed_on_first_run: true
-          include_free: true
-
-        searches:
-          - name: Mountain Bike
-            queries:
-              - mountainbike 29 zoll
-              - mtb hardtail
-            price_min: 100
-            price_max: 500
-            negotiable: any
-            keywords:
-              none_of: [defekt, bastler, ersatzteil]
-
-          - name: Sofa
-            enabled: false
-            query: sofa 3-sitzer
-            price_min: 50
-            price_max: 300
-            negotiable: only
-            keywords:
-              none_of: [defekt, wasserschaden]
-            notify_on_price_drop: true
+      # CONFIG_YAML: |
+      #   recipients:
+      #     - $${MAIL_TO}
+      #
+      #   smtp:
+      #     host: $${SMTP_HOST}
+      #     port: $${SMTP_PORT}
+      #     user: $${SMTP_USER}
+      #     password: $${SMTP_PASSWORD}
+      #     from_address: $${SMTP_FROM}
+      #     from_name: Kleinanzeigen Scanner
+      #     security: $${SMTP_SECURITY}
+      #
+      #   # Applies to all searches, overridable per search
+      #   defaults:
+      #     interval_minutes: 15
+      #     max_pages: 1
+      #     only_offers: true
+      #     exclude_sponsored: true
+      #     seed_on_first_run: true
+      #     include_free: true
+      #
+      #   searches:
+      #     - name: Mountain Bike
+      #       queries:
+      #         - mountainbike 29 zoll
+      #         - mtb hardtail
+      #       price_min: 100
+      #       price_max: 500
+      #       negotiable: any
+      #       keywords:
+      #         none_of: [defekt, bastler, ersatzteil]
+      #
+      #     - name: Sofa
+      #       enabled: false
+      #       query: sofa 3-sitzer
+      #       price_min: 50
+      #       price_max: 300
+      #       negotiable: only
+      #       keywords:
+      #         none_of: [defekt, wasserschaden]
+      #       notify_on_price_drop: true
